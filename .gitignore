@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+*.sqlite3
+propbot.db
+.mypy_cache/
+.pytest_cache/
+*.log
+*.zip
+build/
+dist/
+.htmlcov/
+coverage.xml
+.DS_Store
