@@ -1,0 +1,91 @@
+
+ROLE: Principal Builder (small‑prop grade). Deliver a SINGLE **PR bundle zip** that transforms my FastAPI PropBot skeleton into a FULLY WIRED, **ready‑to‑run two‑venue spot arbitrage bot** (Binance + OKX), with **Dashboard integration**, first‑run setup wizard, paper/testnet/live profiles, SAFE_MODE gating, and end‑to‑end acceptance checks. I will attach: (1) `prop_bot_super_spec_v6.3_super_full_FIXED.md` (my spec), (2) `propbot_sysreport_bundle.zip` (system snapshot), (3) my repo tree or a zip if needed.
+
+OUTPUT (ONE artifact):
+**propbot_arb_E2E_codex_bundle_vX.zip**, containing:
+- MANIFEST.json
+- PR_BODY.md (what changed, how to test E2E)
+- files/                           # ready-to-copy tree (idempotent)
+- patches/*.patch                  # unified diffs (git apply -3)
+- scripts/00_first_run_wizard.sh   # collects keys/profile, writes local .env (ASCII validation)
+- scripts/01_bootstrap_and_check.sh# spins app + runs acceptance curl suite
+- scripts/02_demo_paper.sh         # demo run in paper (mocked books + dry-run exec)
+- scripts/03_demo_testnet.sh       # demo run in testnet (balances + dry-run exec)
+- scripts/validate_env.sh
+- ci/ (GitHub Actions: ruff/mypy/pytest)
+- docs/ (RU: README.md, RUNBOOK.md, OPERATIONS.md, DECISIONS.md)
+- tests/ (unit + light integration)
+
+VENUES & PROFILES
+- Venues: Binance Spot, OKX Spot.
+- Profiles: paper (local mocks), testnet (both venues), live.
+- Switching ONLY by ENV/YAML (no code edits). `.env.example` present.
+- Required keys in `.env` (ASCII-validated):
+  BINANCE_API_KEY, BINANCE_API_SECRET, BINANCE_BASE_URL
+  OKX_API_KEY, OKX_API_SECRET, OKX_PASSPHRASE, OKX_BASE_URL
+  DEFAULT_PROFILE=paper|testnet|live, SAFE_MODE=true|false
+
+MARKET DATA & BOOKS
+- WS L2 snapshot+diff per venue; continuity validation (seq/lastUpdateId). Abort/HOLD on gap.
+- Normalized book model (bids/asks depth N), top-of-book best prices per symbol.
+- Fee/rebate model per venue; compute net spread (bps) after fees; min notional constraint.
+
+ARB ENGINE & SOR
+- Simple taker cross-venue arb: BUY cheaper venue, SELL dearer; maker optional flag.
+- Per-venue caps; rate-limit governor (cancel/replace > place), timeouts, retries.
+- SAFE_MODE gates: paper/testnet use dry-run (`/order/test` on Binance; no real orders anywhere). Live requires SAFE_MODE=false.
+- Hard daily caps (notional/loss) → HOLD. 2‑man RESUME = confirmation token stub.
+
+API SURFACE (must not break existing endpoints)
+- Keep existing endpoints from my skeleton.
+- Add:
+  GET /live-readiness
+  GET /api/arb/opportunities             # ranked list with net bps and reason
+  POST /api/arb/execute                  # execute best opp (dry‑run in SAFE_MODE)
+  GET /api/live/{venue}/account          # balances (read‑only)
+  POST /api/live/{venue}/order           # obey SAFE_MODE
+  GET /api/ui/status/overview            # minimal OK/WARN/HOLD summary + SLOs
+
+OBSERVABILITY & SLO
+- Prometheus metrics: ws_gap_ms, order_cycle_ms, reject_rate, cancel_fail_rate, net_spread_bps,
+  trade_success_total, hold_activated_total.
+- /metrics & /metrics/latency stay; add new gauges/counters.
+- Exception‑budget gates: if reject_rate or ws_gap_ms_p95 exceed thresholds → HOLD (configurable).
+
+DASHBOARD (UI) — MUST BE WIRED AND WORK
+- Add **/dashboard** pages:
+  1) **Setup Wizard** (first run): form for keys, profile (paper/testnet/live), SAFE_MODE; POST → writes .env locally (ASCII check), restarts not required for demo; warn: local dev only.
+  2) **Arb Monitor**: table of /api/arb/opportunities (symbol, prices, net_bps, est. PnL), button “Execute (dry‑run/live)”. Disable live if SAFE_MODE=true.
+  3) **Status & Limits**: shows /api/ui/status/overview + current risk caps + HOLD/RESUME.
+  4) **Accounts**: balances per venue; highlight non‑tradable states; show fee tiers (from config).
+- Minimal, clean UI; Russian labels OK; no external secrets stored server‑side beyond .env on localhost.
+
+TESTS & CI
+- Unit: config parsing, fee model, opp math, SAFE_MODE, governor behavior.
+- Integration (light): without keys → skip‑online gracefully; with testnet → balances readable, dry‑run execute OK.
+- GitHub Actions: Python 3.12; ruff/mypy/pytest green by default (no secrets needed).
+
+SECURITY & SECRETS
+- No real secrets in repo. `.env.example` documents variables.
+- `00_first_run_wizard.sh` only for local dev: ASCII validate; write `.env` in repo root; print warnings about storing secrets locally.
+
+E2E ACCEPTANCE (must pass via scripts; FAIL if not):
+1) `scripts/00_first_run_wizard.sh` runs → writes `.env` with selected profile; validates ASCII only.
+2) `scripts/01_bootstrap_and_check.sh`:
+   - starts app on 127.0.0.1:8000
+   - 200 OK: /api/health, /openapi.json, /live-readiness
+   - 200 OK: /api/arb/opportunities (paper: mocked books; testnet: live books)
+   - 200 OK: /api/live/binance/account and /api/live/okx/account (read‑only; skip if no keys)
+   - 200 OK: /api/arb/execute (SAFE_MODE=true → dry‑run; no real orders)
+   - /metrics expose new gauges/counters; SLO sample visible on /api/ui/status/overview
+3) `scripts/02_demo_paper.sh`: generates mock opportunities and demonstrates dry‑run execute + HOLD/RESUME.
+4) `scripts/03_demo_testnet.sh`: reads balances both venues; executes dry‑run path; prints exact curl for LIVE (commented) and EXIT 1 if SAFE_MODE=false w/o `--i-know-what-im-doing`.
+
+QUALITY BAR
+- Idempotent bundle; can be applied repeatedly via `bash merge_bundle.sh /repo path/to/zip`.
+- No breaking of existing endpoints; all new code typed and linted; clear logging.
+- Russian UI texts acceptable; code/comments in English; docs RU.
+- Minimal external deps; prefer httpx or official SDKs; Python 3.12.
+
+DELIVER EXACT FILE/TREE and CONTENT in your answer (MANIFEST.json first), then attach patches and file contents inline. Ensure paths start from repo root. Avoid external links or secret material.
+
