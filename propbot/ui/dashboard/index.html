@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PropBot Arbitrage Dashboard</title>
+    <link rel="stylesheet" href="assets/styles.css">
+  </head>
+  <body>
+    <header class="header">
+      <h1>PropBot Arbitrage Control Center</h1>
+      <div class="header-status">
+        <span id="header-mode" class="tag">–</span>
+        <span id="header-safe-mode" class="tag">SAFE MODE</span>
+        <span id="header-readiness" class="tag">CHECKING…</span>
+      </div>
+    </header>
+    <main>
+      <section class="panel" id="setup-wizard">
+        <div class="panel-header">
+          <h2>Setup Wizard</h2>
+          <span class="timestamp" id="setup-updated">&nbsp;</span>
+        </div>
+        <ol id="setup-steps" class="step-list">
+          <li>Loading current profile…</li>
+        </ol>
+      </section>
+      <section class="panel" id="arb-monitor">
+        <div class="panel-header">
+          <h2>Arb Monitor</h2>
+          <span class="timestamp" id="arb-updated">&nbsp;</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Buy @</th>
+                <th>Sell @</th>
+                <th>Spread (bps)</th>
+                <th>Notional (USD)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="opportunities-body">
+              <tr><td colspan="6">Searching for opportunities…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel-footer" id="safe-mode-banner" hidden>
+          SAFE_MODE is enabled. Executions are dry-run only.
+        </div>
+      </section>
+      <section class="panel" id="status-limits">
+        <div class="panel-header">
+          <h2>Status &amp; Limits</h2>
+          <span class="timestamp" id="status-updated">&nbsp;</span>
+        </div>
+        <div class="status-grid">
+          <div class="status-card">
+            <h3>Control</h3>
+            <dl>
+              <div><dt>Hold reason</dt><dd id="hold-reason">–</dd></div>
+              <div><dt>SAFE_MODE</dt><dd id="safe-mode-flag">–</dd></div>
+              <div><dt>Readiness</dt><dd id="readiness-flag">–</dd></div>
+            </dl>
+          </div>
+          <div class="status-card">
+            <h3>Risk Limits</h3>
+            <dl id="risk-limits"></dl>
+          </div>
+          <div class="status-card">
+            <h3>P&amp;L</h3>
+            <dl>
+              <div><dt>Realized</dt><dd id="pnl-realized">–</dd></div>
+              <div><dt>Unrealized</dt><dd id="pnl-unrealized">–</dd></div>
+            </dl>
+          </div>
+          <div class="status-card">
+            <h3>Order Books</h3>
+            <pre id="order-books">–</pre>
+          </div>
+        </div>
+      </section>
+      <section class="panel" id="accounts">
+        <div class="panel-header">
+          <h2>Accounts</h2>
+          <span class="timestamp" id="accounts-updated">&nbsp;</span>
+        </div>
+        <div class="accounts-grid" id="accounts-grid">
+          <p>Loading venue balances…</p>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">
+      <span>PropBot &mdash; Binance ↔ OKX spot arbitrage (paper/testnet/live)</span>
+    </footer>
+    <script src="assets/app.js" defer></script>
+  </body>
+</html>
