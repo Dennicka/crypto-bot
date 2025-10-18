@@ -1,0 +1,19 @@
+mode: "testnet"
+safe_mode:
+  enabled: false
+venues:
+  binance:
+    name: "binance"
+    type: "spot"
+    trading_pairs: ["BTC/USDT", "ETH/USDT"]
+    taker_fee_bps: 7.5
+  okx:
+    name: "okx"
+    type: "spot"
+    trading_pairs: ["BTC/USDT", "ETH/USDT"]
+    taker_fee_bps: 7.5
+risk:
+  max_notional: 50
+  max_open_orders: 2
+storage:
+  path: "data/propbot.sqlite"

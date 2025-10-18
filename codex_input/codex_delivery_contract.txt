@@ -1,0 +1,59 @@
+
+CODEX DELIVERY CONTRACT — что ДОЛЖЕН вернуть Codex в одном ZIP-бандле
+(Это вставка в задание Codex; он обязан положить эти файлы в корень/папки проекта)
+
+1) MANIFEST.json
+   • Название бандла, версия, список добавленных/изменённых файлов, минимальные требования (Python 3.12 и т. п.).
+
+2) PR_BODY.md
+   • Что изменилось, какие эндпоинты добавлены, куда смотреть логи/метрики.
+   • Команды запуска/проверки (включая все скрипты 00/01/02/03).
+   • Как проверить paper/testnet/live и смысл SAFE_MODE.
+
+3) RESULTS_E2E.md  ← ОТЧЁТ О РЕЗУЛЬТАТАХ
+   • Скриншоты/логи прохождения scripts/01_bootstrap_and_check.sh на стороне Codex (эмуляция или объяснение).
+   • Таблица: что проверено (эндпоинты, метрики, HOLD/RESUME), статус OK.
+   • Список версий библиотек и среды, на которой прогонялось.
+
+4) INSTALLATION_DROPIN.md  ← ПОЛНАЯ УСТАНОВКА «КУДА УГОДНО» (без git)
+   • Шаги: распаковать в любую папку → python -m venv .venv → активировать venv → pip install -r requirements.txt
+   • Переменные окружения, пример .env.example, значения по умолчанию.
+   • Команда запуска локально и открытие Dashboard.
+
+5) FEATURE_GUIDES/  ← ПОШАГОВЫЕ ГАЙДЫ ПО КАЖДОЙ ФУНКЦИИ
+   • FEATURE_GUIDES/01_profiles_and_safe_mode.md
+   • FEATURE_GUIDES/02_binance_setup.md
+   • FEATURE_GUIDES/03_okx_setup.md
+   • FEATURE_GUIDES/04_order_flow_and_limits.md
+   • FEATURE_GUIDES/05_observability_metrics.md
+   • FEATURE_GUIDES/06_dashboard_wizard.md
+   • Каждая — с точными командами и чек-листом «как понять, что работает».
+
+6) scripts/
+   • 00_first_run_wizard.sh    — записывает .env, проверяет ASCII, подсказки.
+   • 01_bootstrap_and_check.sh — поднимает сервер и бежит по curl-проверкам (E2E acceptance).
+   • 02_demo_paper.sh          — демонстрация возможностей в paper.
+   • 03_demo_testnet.sh        — демонстрация dry-run в testnet.
+   • validate_env.sh           — проверка переменных окружения.
+
+7) configs/
+   • config.paper.yaml, config.testnet.yaml, config.live.yaml — единая схема.
+
+8) docs/ (на русском)
+   • README.md — краткий старт.
+   • RUNBOOK.md — как запускать/останавливать, профили, SAFE_MODE.
+   • OPERATIONS.md — как мониторить, где метрики, что такое HOLD/RESUME, лимиты.
+   • DECISIONS.md — ключевые инженерные решения и трэйд-оффы.
+
+9) tests/ + ci/
+   • tests: unit (конфиги/комиссии/opp math/SAFE_MODE/лимитер), легкая интеграция.
+   • ci: workflow для ruff/mypy/pytest (без секретов).
+
+10) ГАРАНТИИ И ТРЕБОВАНИЯ
+   • Бандл ИДЕМПОТЕНТЕН (повторное применение не ломает проект).
+   • Не ломает существующие эндпоинты каркаса.
+   • Полное соответствие E2E-приёмке (описано в PR_BODY.md и RESULTS_E2E.md).
+   • Python 3.12, минимальные зависимости, прозрачные ошибки.
+
+Если чего-то из этого нет — бандл не принимается.
+

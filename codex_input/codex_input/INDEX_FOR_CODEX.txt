@@ -1,0 +1,4 @@
+SPEC_URL=https://raw.githubusercontent.com/Dennicka/crypto-bot/refs/heads/main/codex_input/prop_bot_super_spec_v6.3_super_full_FIXED.md
+PROMPT_URL=https://raw.githubusercontent.com/Dennicka/crypto-bot/refs/heads/main/codex_input/codex_handoff_prompt_ARB_E2E.txt
+CONTRACT_URL=https://raw.githubusercontent.com/Dennicka/crypto-bot/refs/heads/main/codex_input/codex_delivery_contract.txt
+SYSREPORT_URL=https://github.com/Dennicka/crypto-bot/blob/main/codex_input/propbot_sysreport_bundle.zip
