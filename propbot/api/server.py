@@ -2,21 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 from starlette.responses import StreamingResponse
 
 from ..context import AppContext
-from ..engine.state import Opportunity
 
 
 def create_app(context: AppContext) -> FastAPI:
     app = FastAPI(title="PropBot Arbitrage", version="0.1.0")
     app.mount("/static", StaticFiles(directory="propbot/ui/static"), name="static")
-    app.mount("/dashboard", StaticFiles(directory="propbot/ui/dashboard", html=True), name="dashboard")
+    templates = Jinja2Templates(directory="propbot/ui/templates")
 
     def get_context() -> AppContext:
         return context
@@ -29,26 +30,9 @@ def create_app(context: AppContext) -> FastAPI:
     async def _shutdown() -> None:  # pragma: no cover - integration hook
         context.stop()
 
-    @app.get("/", include_in_schema=False)
-    async def root_redirect() -> RedirectResponse:
-        return RedirectResponse(url="/dashboard", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
-
-    def _serialize_opportunity(opportunity: Opportunity) -> Dict[str, Any]:
-        return {
-            "symbol": opportunity.symbol,
-            "buy_venue": opportunity.buy_venue,
-            "sell_venue": opportunity.sell_venue,
-            "spread_bps": opportunity.spread_bps,
-            "notional": opportunity.notional,
-            "timestamp": opportunity.timestamp,
-        }
-
-    def _resolve_venue_name(ctx: AppContext, venue: str) -> Optional[str]:
-        venue_lower = venue.lower()
-        for name in ctx.engine.connector_names():
-            if name.lower() == venue_lower:
-                return name
-        return None
+    @app.get("/", response_class=HTMLResponse)
+    async def dashboard(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse("index.html", {"request": request})
 
     @app.get("/api/health")
     async def health(ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
@@ -70,37 +54,6 @@ def create_app(context: AppContext) -> FastAPI:
             "ready": ready,
             "hold_reason": ctx.control_state.hold_reason,
             "order_books": ctx.engine_state.order_books,
-        }
-
-    @app.get("/api/ui/status/overview")
-    async def ui_status_overview(ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
-        readiness = {
-            "ready": not ctx.control_state.is_hold and len(ctx.engine_state.order_books) >= 2,
-            "hold_reason": ctx.control_state.hold_reason,
-            "order_books": ctx.engine_state.order_books,
-        }
-        venues: Dict[str, Any] = {}
-        for venue_key, venue_cfg in ctx.config.venues.items():
-            venues[venue_cfg.name] = {
-                "trading_pairs": venue_cfg.trading_pairs,
-                "maker_fee_bps": venue_cfg.maker_fee_bps,
-                "taker_fee_bps": venue_cfg.taker_fee_bps,
-                "simulate": venue_cfg.simulate,
-                "credentials_configured": bool(venue_cfg.credentials.api_key and venue_cfg.credentials.api_secret),
-            }
-        return {
-            "mode": ctx.config.mode,
-            "safe_mode": ctx.control_state.safe_mode_enabled,
-            "hold_reason": ctx.control_state.hold_reason,
-            "limits": ctx.config.risk.model_dump(),
-            "pnl": {
-                "realized": ctx.engine_state.pnl_realized,
-                "unrealized": ctx.engine_state.pnl_unrealized,
-            },
-            "order_books": ctx.engine_state.order_books,
-            "venues": venues,
-            "exposure": ctx.engine.exposure(),
-            "readiness": readiness,
         }
 
     @app.get("/api/ui/control-state")
@@ -169,61 +122,20 @@ def create_app(context: AppContext) -> FastAPI:
     async def recon_fees(ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
         return {venue: config.taker_fee_bps for venue, config in ctx.config.venues.items()}
 
-    @app.get("/api/arb/opportunities")
     @app.get("/api/opportunities")
     async def opportunities(ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
-        listed = ctx.engine.listed_opportunities(limit=20)
-        return {"opportunities": [_serialize_opportunity(opp) for opp in listed]}
-
-    @app.post("/api/arb/execute")
-    async def execute_arbitrage(body: Dict[str, Any], ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
-        requested_symbol = body.get("symbol")
-        requested_buy = body.get("buy_venue")
-        requested_sell = body.get("sell_venue")
-        candidate: Optional[Opportunity] = None
-        opportunities = ctx.engine.listed_opportunities(limit=20)
-        if requested_symbol or requested_buy or requested_sell:
-            for opportunity in opportunities:
-                if requested_symbol and opportunity.symbol != requested_symbol:
-                    continue
-                if requested_buy and opportunity.buy_venue != requested_buy:
-                    continue
-                if requested_sell and opportunity.sell_venue != requested_sell:
-                    continue
-                candidate = opportunity
-                break
-        if candidate is None:
-            candidate = ctx.engine.best_opportunity()
-        if candidate is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no opportunities available")
-        result = ctx.engine.execute_opportunity(candidate)
-        return {"opportunity": _serialize_opportunity(candidate), **result, "safe_mode": ctx.control_state.safe_mode_enabled}
-
-    @app.get("/api/live/{venue}/account")
-    async def live_account(venue: str, ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
-        resolved = _resolve_venue_name(ctx, venue)
-        if resolved is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"unknown venue '{venue}'")
-        venue_cfg = next((cfg for cfg in ctx.config.venue_list if cfg.name == resolved), None)
-        if venue_cfg is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"unconfigured venue '{venue}'")
-        connector = ctx.engine.connector(resolved)
-        if connector is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"connector for '{venue}' not available")
-        credentials_configured = bool(venue_cfg.credentials.api_key and venue_cfg.credentials.api_secret)
-        balances = connector.balances() if (credentials_configured or venue_cfg.simulate) else {}
-        message = None
-        if not credentials_configured and not venue_cfg.simulate:
-            message = "API keys missing: balances unavailable"
-        elif not credentials_configured and venue_cfg.simulate:
-            message = "Using simulated balances (no API keys provided)"
         return {
-            "venue": resolved,
-            "mode": ctx.config.mode,
-            "credentials_configured": credentials_configured,
-            "simulate": venue_cfg.simulate,
-            "balances": balances,
-            "message": message,
+            "opportunities": [
+                {
+                    "symbol": opp.symbol,
+                    "buy_venue": opp.buy_venue,
+                    "sell_venue": opp.sell_venue,
+                    "spread_bps": opp.spread_bps,
+                    "notional": opp.notional,
+                    "timestamp": opp.timestamp,
+                }
+                for opp in ctx.engine_state.opportunities
+            ]
         }
 
     @app.get("/metrics")

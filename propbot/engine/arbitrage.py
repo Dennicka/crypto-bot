@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from ..config import AppConfig, VenueConfig
 from ..connectors.binance import BinanceConnector
@@ -9,7 +9,6 @@ from ..connectors.okx import OKXConnector
 from ..engine.metrics import MetricsRegistry
 from ..engine.state import ControlState, EngineState, ExecutionRecord, Opportunity
 from ..storage import Journal
-from ..connectors.base import VenueConnector
 
 CONNECTOR_FACTORIES = {
     "binance": BinanceConnector,
@@ -34,7 +33,7 @@ class ArbitrageEngine:
         self.journal = journal
         self.state = state
         self.control_state = control_state
-        self._connectors: Dict[str, VenueConnector] = {}
+        self._connectors: Dict[str, object] = {}
         for venue in config.venue_list:
             factory = CONNECTOR_FACTORIES.get(venue.name.lower())
             if factory is None:
@@ -116,18 +115,15 @@ class ArbitrageEngine:
     def _execute_if_allowed(self, opportunity: Opportunity) -> bool:
         if self.control_state.safe_mode_enabled:
             return False
-        return self._perform_execution(opportunity)
-
-    def _perform_execution(self, opportunity: Opportunity) -> bool:
         buy_connector = self._connectors[opportunity.buy_venue]
         sell_connector = self._connectors[opportunity.sell_venue]
-        qty = opportunity.notional / max(self.state.order_books[opportunity.buy_venue]["ask"], 1e-6)
+        qty = opportunity.notional / self.state.order_books[opportunity.buy_venue]["ask"]
         try:
             buy_order = buy_connector.place_order(opportunity.symbol, "buy", qty)
             sell_order = sell_connector.place_order(opportunity.symbol, "sell", qty)
         except ValueError as exc:  # insufficient balance
             self.metrics.increment("execution_rejected_total", {"reason": str(exc)})
-            raise
+            return False
         pnl = sell_order["price"] - buy_order["price"]
         self.state.pnl_realized += pnl * qty
         self.metrics.observe("order_cycle_ms_p95", 120, {"path": "simulated"})
@@ -163,53 +159,3 @@ class ArbitrageEngine:
 
     def connector_names(self) -> List[str]:
         return list(self._connectors.keys())
-
-    def connector(self, name: str) -> Optional[VenueConnector]:
-        return self._connectors.get(name)
-
-    def best_opportunity(self) -> Optional[Opportunity]:
-        fresh = self._find_opportunities()
-        if fresh:
-            return max(fresh, key=lambda opp: opp.spread_bps)
-        if self.state.opportunities:
-            return max(self.state.opportunities, key=lambda opp: opp.spread_bps)
-        return None
-
-    def listed_opportunities(self, limit: int = 20) -> List[Opportunity]:
-        combined = self._find_opportunities()
-        if not combined:
-            combined = list(self.state.opportunities)
-        combined.sort(key=lambda opp: opp.spread_bps, reverse=True)
-        return combined[:limit]
-
-    def execute_opportunity(self, opportunity: Opportunity) -> Dict[str, object]:
-        dry_run = self.control_state.safe_mode_enabled
-        executed = False
-        error: Optional[str] = None
-        if not dry_run:
-            try:
-                executed = self._perform_execution(opportunity)
-            except ValueError as exc:
-                error = str(exc)
-        status = "dry-run" if dry_run else ("executed" if executed else "rejected")
-        record = ExecutionRecord(opportunity=opportunity, executed=executed, reason=error or "")
-        self.state.record_execution(record)
-        event_payload = {
-            "timestamp": time.time(),
-            "symbol": opportunity.symbol,
-            "buy_venue": opportunity.buy_venue,
-            "sell_venue": opportunity.sell_venue,
-            "spread_bps": opportunity.spread_bps,
-            "status": status,
-        }
-        if error:
-            event_payload["reason"] = error
-            self.journal.record_event("manual_execution_error", event_payload)
-        else:
-            self.journal.record_event("manual_execution", event_payload)
-        return {
-            "status": status,
-            "dry_run": dry_run,
-            "executed": executed,
-            "error": error,
-        }

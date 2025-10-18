@@ -23,7 +23,7 @@ PropBot is a two-venue (Binance + OKX) spot arbitrage bot with SAFE_MODE guard r
    ```bash
    ./scripts/02_demo_paper.sh
    ```
-4. Visit `http://localhost:8000/dashboard` for the live dashboard UI.
+4. Visit `http://localhost:8000` for the dashboard.
 
 ## Documentation
 Detailed operational guidance lives under `docs/` and feature-specific notes under `FEATURE_GUIDES/`.

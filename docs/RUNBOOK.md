@@ -3,8 +3,8 @@
 ## Startup Checklist
 1. Ensure `.env` secrets are loaded and validated via `./validate_env.sh`.
 2. Review SAFE_MODE gates: system should boot in HOLD until confirmed.
-3. Run `./scripts/01_bootstrap_and_check.sh` to confirm lint/tests pass and `/dashboard` responds 200.
-4. Start the service with `python main.py run --config <config>` and open `http://localhost:8000/dashboard`.
+3. Run `./scripts/01_bootstrap_and_check.sh` to confirm lint/tests pass.
+4. Start the service with `python main.py run --config <config>`.
 
 ## Hold / Resume Procedure
 - Trigger HOLD: `curl -X POST http://localhost:8000/api/ui/control-state/hold -d '{"reason":"manual"}'`.

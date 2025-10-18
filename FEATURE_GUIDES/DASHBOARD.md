@@ -1,8 +1,6 @@
 # Dashboard UX
 
-- Single-page dashboard served at `/dashboard` (FastAPI `StaticFiles` mount).
-- Four sections: Setup Wizard, Arb Monitor, Status & Limits, and Accounts.
-- Poll cadence (5s) hitting `/api/health`, `/live-readiness`, `/api/ui/status/overview`, `/api/arb/opportunities`, and `/api/live/{venue}/account`.
-- Execute buttons wire to `POST /api/arb/execute` and are hard-disabled while SAFE_MODE is enabled (dry-run messaging shown).
-- Accounts cards display whether API credentials are configured vs simulated balances.
-- Built bundle lives under `propbot/ui/dashboard/`; no Node tooling required at runtime.
+- Single-page dashboard served at `/` using vanilla JS.
+- Polls `/api/health`, `/api/opportunities`, and `/api/ui/pnl` every 2 seconds.
+- HOLD/Resume buttons call corresponding control-state endpoints.
+- Styling optimized for dark-mode operations with clear status banner.
