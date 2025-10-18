@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import typer
 import uvicorn
+from pathlib import Path
 
 from propbot import AppContext
 from propbot.api import create_app
@@ -20,17 +18,7 @@ def run(
     port: int = typer.Option(8000, help="Port for the API server"),
 ) -> None:
     """Launch the API server with the given configuration."""
-    if env_file is None:
-        default_env = Path(".env")
-        if default_env.exists():
-            env_file = default_env
-    resolved_config = config
-    if config == Path("configs/config.paper.yaml"):
-        default_profile = os.environ.get("DEFAULT_PROFILE")
-        candidate = Path(f"configs/config.{default_profile}.yaml") if default_profile else None
-        if candidate and candidate.exists():
-            resolved_config = candidate
-    context = AppContext.from_file(resolved_config, env_file=env_file)
+    context = AppContext.from_file(config, env_file=env_file)
     app = create_app(context)
     uvicorn.run(app, host=host, port=port)
 

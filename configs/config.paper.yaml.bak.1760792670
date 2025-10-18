@@ -1,22 +1,18 @@
 mode: paper
 safe_mode:
-  enabled: false
-  hold_on_startup: false
-  require_double_confirmation: false
+  enabled: true
+  hold_on_startup: true
+  require_double_confirmation: true
 venues:
   binance:
     name: binance
-    trading_pairs:
-    - BTC/USDT
-    - ETH/USDT
+    trading_pairs: ["BTC/USDT"]
     taker_fee_bps: 7.5
     maker_fee_bps: 1.0
     simulate: true
   okx:
     name: okx
-    trading_pairs:
-    - BTC/USDT
-    - ETH/USDT
+    trading_pairs: ["BTC/USDT"]
     taker_fee_bps: 7.0
     maker_fee_bps: 0.8
     simulate: true

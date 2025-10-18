@@ -23,16 +23,9 @@ class VenueConfig(BaseModel):
     taker_fee_bps: float = 7.5
     maker_fee_bps: float = 1.0
     min_notional: float = 10.0
-    min_qty: float = 0.0001
-    price_precision: int = 2
-    quantity_precision: int = 6
     credentials: VenueCredentials = Field(default_factory=VenueCredentials)
     weight: float = 0.5
     simulate: bool = True
-    rest_endpoint: str = ""
-    ws_endpoint: str = ""
-    recv_window_ms: int = 5000
-    symbol_overrides: Dict[str, str] = Field(default_factory=dict)
 
 
 class StorageConfig(BaseModel):
@@ -59,13 +52,6 @@ class SchedulerConfig(BaseModel):
     tick_interval_ms: int = 250
 
 
-class EngineConfig(BaseModel):
-    min_spread_bps: float = 15.0
-    default_notional_usd: float = 50.0
-    cooldown_ms: int = 1500
-    safety_margin_bps: float = 5.0
-
-
 class AppConfig(BaseModel):
     mode: str = Field(pattern=r"^(paper|testnet|live)$")
     safe_mode: SafeModeConfig = Field(default_factory=SafeModeConfig)
@@ -74,7 +60,6 @@ class AppConfig(BaseModel):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     ui_base_url: str = "http://localhost:8000"
-    engine: EngineConfig = Field(default_factory=EngineConfig)
 
     @property
     def venue_list(self) -> List[VenueConfig]:
