@@ -14,7 +14,7 @@ class Journal:
     def __init__(self, config: StorageConfig) -> None:
         self._path = Path(config.journal_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self._path)
+        self._conn = sqlite3.connect(self._path, check_same_thread=False)
         self._conn.execute(
             """
             CREATE TABLE IF NOT EXISTS journal (

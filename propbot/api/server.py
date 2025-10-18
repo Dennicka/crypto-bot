@@ -2,38 +2,48 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Dict
+from pathlib import Path
+from typing import Any, AsyncIterator, Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
 from starlette.responses import StreamingResponse
 from propbot.api.ui_config import router as _ui_cfg_router
 
 from ..context import AppContext
 
 
-def create_app(context: AppContext) -> FastAPI:
+def _default_context() -> AppContext:
+    config_path = Path("configs/config.paper.yaml")
+    if not config_path.exists():  # pragma: no cover - defensive guard for deployments
+        raise RuntimeError("Default config 'configs/config.paper.yaml' not found")
+    return AppContext.from_file(config_path)
+
+
+def create_app(context: Optional[AppContext] = None) -> FastAPI:
+    ctx = context or _default_context()
+
     app = FastAPI(title="PropBot Arbitrage", version="0.1.0")
-    app.mount("/static", StaticFiles(directory="propbot/ui/static"), name="static")
-    templates = Jinja2Templates(directory="propbot/ui/templates")
+    templates = Jinja2Templates(directory="web/templates")
+    app.mount("/static", StaticFiles(directory="web/static"), name="static")
+    app.include_router(_ui_cfg_router)
 
     def get_context() -> AppContext:
-        return context
+        return ctx
 
     @app.on_event("startup")
     async def _startup() -> None:  # pragma: no cover - integration hook
-        context.start()
+        ctx.start()
 
     @app.on_event("shutdown")
     async def _shutdown() -> None:  # pragma: no cover - integration hook
-        context.stop()
+        ctx.stop()
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse("index.html", {"request": request})
+        return templates.TemplateResponse(request, "dashboard.html", {"request": request})
 
     @app.get("/api/health")
     async def health(ctx: AppContext = Depends(get_context)) -> Dict[str, Any]:
