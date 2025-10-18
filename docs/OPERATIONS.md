@@ -19,3 +19,4 @@ Follow-up Actions:
 - GDPR export handled via `/api/ui/stream` snapshot + journal export.
 - Tax ledger derived from journal entries stored in SQLite.
 - WORM export: copy journal DB to immutable storage daily.
+- API credential hygiene: rotate Binance/OKX keys quarterly and update `.env` followed by `./validate_env.sh`.

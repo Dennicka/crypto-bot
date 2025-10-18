@@ -17,6 +17,7 @@ class AppContext:
     """Holds the wiring for the arbitrage application."""
 
     config_path: Path
+    env_file: Optional[Path]
     config: AppConfig
     metrics: MetricsRegistry
     journal: Journal
@@ -45,6 +46,7 @@ class AppContext:
         scheduler.register_task("rebalance", engine.run_rebalancer, interval_seconds=60.0)
         return cls(
             config_path=path,
+            env_file=env_file,
             config=config,
             metrics=metrics,
             journal=journal,
@@ -60,3 +62,13 @@ class AppContext:
     def stop(self) -> None:
         self.scheduler.stop()
         self.journal.close()
+
+    def apply_engine_overrides(self, *, min_spread_bps: Optional[float] = None, default_notional_usd: Optional[float] = None) -> None:
+        self.engine.apply_runtime_config(
+            min_spread_bps=min_spread_bps,
+            default_notional_usd=default_notional_usd,
+        )
+        if min_spread_bps is not None:
+            self.config.engine.min_spread_bps = min_spread_bps
+        if default_notional_usd is not None:
+            self.config.engine.default_notional_usd = default_notional_usd

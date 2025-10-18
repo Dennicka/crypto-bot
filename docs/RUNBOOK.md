@@ -3,16 +3,17 @@
 ## Startup Checklist
 1. Ensure `.env` secrets are loaded and validated via `./validate_env.sh`.
 2. Review SAFE_MODE gates: system should boot in HOLD until confirmed.
-3. Run `./scripts/01_bootstrap_and_check.sh` to confirm lint/tests pass.
-4. Start the service with `python main.py run --config <config>`.
+3. Run `./scripts/01_bootstrap_and_check.sh` to confirm lint/tests pass and `/dashboard` responds 200.
+4. Start the service with `./scripts/start_profile.sh <paper|testnet|live>` and open `http://localhost:8000/dashboard`.
+5. Confirm `/api/ui/config/validate` returns `valid=true` for the active profile and adjust spread/notional thresholds via `/api/ui/config/apply` if needed.
 
 ## Hold / Resume Procedure
 - Trigger HOLD: `curl -X POST http://localhost:8000/api/ui/control-state/hold -d '{"reason":"manual"}'`.
 - Resume requires two invocations of `/resume` when SAFE_MODE enabled.
 
 ## Incident Response
-- Inspect `/metrics` and `/metrics/latency` for SLO breaches.
-- Use `/api/ui/recon/*` endpoints to confirm balances and positions.
+- Inspect `/metrics`, `/metrics/latency`, and `/dashboard` runtime widgets for SLO breaches and execution cadence.
+- Use `/api/ui/recon/*` endpoints to confirm balances and positions; `./scripts/demo_trade.sh` can tail spreads and exposures in real time.
 - Record RCA in `docs/OPERATIONS.md` under the incident log section.
 
 ## DR Drills

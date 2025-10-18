@@ -7,6 +7,11 @@ if [[ ! -f .env ]]; then
   echo "[Wizard] Created .env from example. Please update API keys before live trading."
 fi
 
+if ! grep -q "^DEFAULT_PROFILE" .env; then
+  echo "DEFAULT_PROFILE=paper" >> .env
+  echo "[Wizard] Ensured DEFAULT_PROFILE=paper in .env"
+fi
+
 echo "[Wizard] Validating environment variables..."
 source .env || true
 ./validate_env.sh || echo "[Wizard] Missing values are acceptable for paper mode."

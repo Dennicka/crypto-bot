@@ -3,19 +3,39 @@ safe_mode:
   enabled: true
   hold_on_startup: true
   require_double_confirmation: true
+engine:
+  min_spread_bps: 25.0
+  default_notional_usd: 100.0
+  cooldown_ms: 1500
+  safety_margin_bps: 5.0
 venues:
   binance:
     name: binance
-    trading_pairs: ["BTC/USDT"]
+    trading_pairs: ["BTC/USDT", "ETH/USDT"]
     taker_fee_bps: 7.5
     maker_fee_bps: 1.0
+    min_notional: 10.0
+    min_qty: 0.0001
+    price_precision: 2
+    quantity_precision: 6
     simulate: true
+    credentials:
+      api_key: ${BINANCE_API_KEY}
+      api_secret: ${BINANCE_API_SECRET}
   okx:
     name: okx
-    trading_pairs: ["BTC/USDT"]
+    trading_pairs: ["BTC/USDT", "ETH/USDT"]
     taker_fee_bps: 7.0
     maker_fee_bps: 0.8
+    min_notional: 10.0
+    min_qty: 0.0001
+    price_precision: 2
+    quantity_precision: 6
     simulate: true
+    credentials:
+      api_key: ${OKX_API_KEY}
+      api_secret: ${OKX_API_SECRET}
+      passphrase: ${OKX_PASSPHRASE}
 risk:
   max_position_usd: 2000
   max_single_order_usd: 150

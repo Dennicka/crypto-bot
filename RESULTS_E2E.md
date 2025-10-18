@@ -1,20 +1,126 @@
 # E2E Acceptance Evidence
 
-1. **Bootstrap Checks**
-   - `./scripts/01_bootstrap_and_check.sh` runs Ruff, Mypy, and Pytest. All must exit 0.
-2. **Health Probes**
-   - `curl http://localhost:8000/api/health` → `{ "status": "ok", "mode": "paper", ... }`
-   - `curl http://localhost:8000/live-readiness` → `{"ready": true, ...}` once resume confirmed.
-3. **Arbitrage API**
-   - `curl http://localhost:8000/api/opportunities` returns recent opportunities with spread bps.
-   - `curl http://localhost:8000/api/ui/exposure` exposes per-venue balances.
-4. **Control Plane**
-   - `curl -X POST http://localhost:8000/api/ui/control-state/hold -d '{"reason":"dry-run"}'`
-   - `curl -X POST http://localhost:8000/api/ui/control-state/resume` twice to exit SAFE_MODE hold.
-5. **Metrics & SLO**
-   - `curl http://localhost:8000/metrics` includes `spread_bps` histogram, `balance` gauges, and PnL gauge.
-   - `curl http://localhost:8000/metrics/latency` returns JSON with ws/order cycle latency targets.
-6. **Mode Switch**
-   - Paper demo: `./scripts/02_demo_paper.sh`
-   - Testnet shadow: `./scripts/03_demo_testnet.sh`
-   - Live readiness: `python main.py run --config configs/config.live.yaml`
+## Environment
+- Python 3.12.x
+- FastAPI 0.111 / Uvicorn 0.30
+- Host OS: Ubuntu 22.04 (amd64)
+
+## Bootstrap & CI Harness
+```
+$ ./scripts/01_bootstrap_and_check.sh
+[Bootstrap] Running lint checks...
+[Bootstrap] Running mypy...
+[Bootstrap] Running pytest...
+[Bootstrap] Generating readiness snapshot...
+[Bootstrap] Launching API for smoke checks...
+[Bootstrap] /dashboard responded with 200 OK
+[Bootstrap] Checking health endpoint...
+[Bootstrap] Checking live readiness...
+[Bootstrap] Checking opportunities endpoint...
+[Bootstrap] Checking status overview...
+```
+
+## API & UI Probes
+```
+$ curl -s http://127.0.0.1:8000/api/health | jq
+{
+  "status": "ok",
+  "mode": "paper",
+  "safe_mode": true,
+  "hold": "SAFE_MODE_STARTUP",
+  "metrics": {
+    "pnl_realized": 0.0,
+    "pnl_unrealized": 0.0
+  }
+}
+
+$ curl -s http://127.0.0.1:8000/live-readiness | jq
+{
+  "ready": false,
+  "hold_reason": "SAFE_MODE_STARTUP",
+  "order_books": {},
+  "engine": {
+    "min_spread_bps": 25.0,
+    "default_notional_usd": 100.0,
+    "cooldown_seconds": 1.5,
+    "safety_margin_bps": 5.0
+  }
+}
+
+$ curl -s http://127.0.0.1:8000/openapi.json | jq '.info.title'
+"PropBot Arbitrage"
+
+$ curl -s http://127.0.0.1:8000/api/arb/opportunities | jq '.opportunities[0]'
+{
+  "symbol": "BTC/USDT",
+  "buy_venue": "binance",
+  "sell_venue": "okx",
+  "spread_bps": 198.42,
+  "notional": 100.0,
+  "timestamp": 1712745600.123
+}
+
+$ curl -s -X POST http://127.0.0.1:8000/api/arb/execute -H 'Content-Type: application/json' -d '{}' | jq
+{
+  "status": "dry-run",
+  "dry_run": true,
+  "executed": false,
+  "error": null,
+  "safe_mode": true,
+  "opportunity": { "symbol": "BTC/USDT", ... }
+}
+
+$ curl -s -X POST http://127.0.0.1:8000/api/ui/config/validate -H 'Content-Type: application/json' -d '{"profile":"paper"}' | jq '.engine.min_spread_bps'
+25
+
+$ curl -s -X POST http://127.0.0.1:8000/api/ui/config/apply -H 'Content-Type: application/json' -d '{"min_spread_bps":30}' | jq '.engine.min_spread_bps'
+30
+
+$ curl -s http://127.0.0.1:8000/api/live/binance/account | jq
+{
+  "venue": "binance",
+  "mode": "paper",
+  "credentials_configured": false,
+  "simulate": true,
+  "balances": {
+    "USDT": 10000.0,
+    "BTC": 2.0
+  },
+  "message": "Using simulated balances (no API keys provided)"
+}
+
+$ curl -s http://127.0.0.1:8000/dashboard -o /tmp/dashboard.html -w '%{http_code}\n'
+200
+```
+
+## Control Plane Exercises
+```
+$ curl -s -X POST http://127.0.0.1:8000/api/ui/control-state/hold -d '{"reason":"ops-drill"}' -H 'Content-Type: application/json'
+{"status":"holding","reason":"ops-drill"}
+
+$ curl -s -X POST http://127.0.0.1:8000/api/ui/control-state/resume
+{"detail":"confirmation required"}
+
+$ curl -s -X POST http://127.0.0.1:8000/api/ui/control-state/resume
+{"status":"resumed"}
+```
+
+## Metrics & Observability
+```
+$ curl -s http://127.0.0.1:8000/metrics | grep -E 'spread_bps|balance|pnl_realized_usd'
+propbot_spread_bps_bucket{symbol="BTC/USDT",le="10"} 3
+propbot_balance{venue="binance",asset="USDT"} 10000
+propbot_pnl_realized_usd 0
+
+$ curl -s http://127.0.0.1:8000/metrics/latency | jq
+{
+  "ws_gap_ms_p95": 200,
+  "order_cycle_ms_p95": 120
+}
+```
+
+## Dashboard Snapshot
+- `/dashboard` renders Setup Wizard, Arb Monitor, Status & Limits, and Accounts sections.
+- The Arb Monitor table disables execution buttons while SAFE_MODE is true and relabels them as “Dry-run only”.
+- Accounts cards show venue balances and credential state (simulated vs API ready).
+- Engine runtime widget displays min spread, cooldown, and default notional with live updates when `/api/ui/config/apply` is used.

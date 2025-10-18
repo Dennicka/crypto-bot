@@ -24,12 +24,13 @@ class ExecutionRecord:
 
 @dataclass
 class EngineState:
-    order_books: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    balances: Dict[str, float] = field(default_factory=dict)
+    order_books: Dict[str, Dict[str, Dict[str, float]]] = field(default_factory=dict)
+    balances: Dict[str, Dict[str, float]] = field(default_factory=dict)
     opportunities: List[Opportunity] = field(default_factory=list)
     executions: List[ExecutionRecord] = field(default_factory=list)
     pnl_realized: float = 0.0
     pnl_unrealized: float = 0.0
+    inventory_baseline: float = 0.0
 
     @classmethod
     def make_default(cls) -> "EngineState":
