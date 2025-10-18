@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from starlette.responses import StreamingResponse
+from propbot.api.ui_config import router as _ui_cfg_router
 
 from ..context import AppContext
 
