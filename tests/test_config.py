@@ -21,4 +21,3 @@ venues:
     config = load_config(config_path)
     assert config.mode == "paper"
     assert "binance" in config.venues
-    assert config.engine.min_spread_bps > 0

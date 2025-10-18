@@ -1,51 +1,19 @@
-mode: testnet
+mode: "testnet"
 safe_mode:
-  enabled: true
-  hold_on_startup: true
-  require_double_confirmation: true
-engine:
-  min_spread_bps: 35.0
-  default_notional_usd: 40.0
-  cooldown_ms: 2000
-  safety_margin_bps: 7.5
+  enabled: false
 venues:
   binance:
-    name: binance
+    name: "binance"
+    type: "spot"
     trading_pairs: ["BTC/USDT", "ETH/USDT"]
     taker_fee_bps: 7.5
-    maker_fee_bps: 1.0
-    min_notional: 10.0
-    min_qty: 0.0001
-    price_precision: 2
-    quantity_precision: 6
-    rest_endpoint: https://testnet.binance.vision
-    simulate: false
-    credentials:
-      api_key: ${BINANCE_API_KEY}
-      api_secret: ${BINANCE_API_SECRET}
   okx:
-    name: okx
+    name: "okx"
+    type: "spot"
     trading_pairs: ["BTC/USDT", "ETH/USDT"]
-    taker_fee_bps: 7.0
-    maker_fee_bps: 0.8
-    min_notional: 10.0
-    min_qty: 0.0001
-    price_precision: 2
-    quantity_precision: 6
-    rest_endpoint: https://www.okx.com
-    simulate: false
-    credentials:
-      api_key: ${OKX_API_KEY}
-      api_secret: ${OKX_API_SECRET}
-      passphrase: ${OKX_PASSPHRASE}
+    taker_fee_bps: 7.5
 risk:
-  max_position_usd: 1000
-  max_single_order_usd: 50
-  max_daily_drawdown_usd: 200
-  stop_loss_bps: 35
-scheduler:
-  max_workers: 4
-  tick_interval_ms: 150
+  max_notional: 50
+  max_open_orders: 2
 storage:
-  journal_path: data/testnet_journal.sqlite3
-  archive_path: data/archive/testnet
+  path: "data/propbot.sqlite"

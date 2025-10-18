@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-./scripts/start_profile.sh testnet "$@"
+source .venv/bin/activate
+python main.py run --config configs/config.testnet.yaml
