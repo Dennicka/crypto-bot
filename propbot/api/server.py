@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from starlette.responses import StreamingResponse
+from propbot.api.ui_config import router as _ui_cfg_router
 
 from ..context import AppContext
 
@@ -169,6 +170,3 @@ def create_app(context: AppContext) -> FastAPI:
     async def stream(ctx: AppContext = Depends(get_context)) -> Response:
         return StreamingResponse(event_stream(ctx), media_type="text/event-stream")
     return app
-# --- include Phase-1 UI/validate router ---
-from propbot.api.ui_config import router as _ui_cfg_router
-app.include_router(_ui_cfg_router)

@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
-from propbot.api.server import app
+from propbot.api.server import create_app
+app = create_app()
 
 client = TestClient(app)
 
